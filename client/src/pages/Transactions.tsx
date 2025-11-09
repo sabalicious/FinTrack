@@ -1,5 +1,9 @@
-// Transactions.tsx
-function Transactions() {
-  return <div>Transactions Page</div>;
-}
+import React from "react";
+
+const Transactions: React.FC = () => {
+  return (
+    <div>Transactions</div>
+  );
+};
+
 export default Transactions;

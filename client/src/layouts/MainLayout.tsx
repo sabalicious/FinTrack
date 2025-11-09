@@ -1,19 +1,25 @@
-import { Outlet } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
 
-function MainLayout() {
+const MainLayout: React.FC = () => {
   return (
-    <div className="flex">
+    <div className="flex min-h-screen">
+      {/* Sidebar слева */}
       <Sidebar />
-      <div className="flex-1">
+
+      <div className="flex-1 flex flex-col">
+        {/* Header сверху */}
         <Header />
-        <main className="p-4">
-          <Outlet /> {/* Здесь будут отображаться страницы Dashboard, Transactions и т.д. */}
-        </main>
+
+        {/* Контент */}
+        <div className="p-4">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default MainLayout;

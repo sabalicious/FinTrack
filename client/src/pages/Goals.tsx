@@ -1,5 +1,9 @@
-// Goals.tsx
-function Goals() {
-  return <div>Goals Page</div>;
-}
+import React from "react";
+
+const Goals: React.FC = () => {
+  return (
+    <div>Goals</div>
+  );
+};
+
 export default Goals;
