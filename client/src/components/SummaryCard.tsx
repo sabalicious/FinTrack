@@ -1,8 +1,22 @@
 import React from "react";
 
-const SummaryCard: React.FC = () => {
+interface SummaryCardProps {
+  title: string;
+  amount: number;
+  type: 'balance' | 'income' | 'expense';
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, amount, type}) => {
+  const bgColor = 
+    type === 'balance' ? 'bg-blue-500' :
+    type === 'income' ? 'bg-green-500' :
+    'bg-red-500';
+
   return (
-    <div>Summary Card</div>
+    <div className={`${bgColor} text-white p-4 rounded shadow-md`}>
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="text-2xl mt-2">{amount}</p>
+    </div>
   );
 };
 
