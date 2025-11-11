@@ -1,13 +1,16 @@
 import React from "react";
 import SummaryCard from "../components/SummaryCard";
+import BalanceCard from "../components/dashboard/BalanceCard";
+import FinanceChart from "../components/dashboard/FinanceChart";
+import RecentTransactions from "../components/dashboard/RecentTransactions";
 
 const Dashboard: React.FC = () => {
   return (
-    <>
-    <SummaryCard title="Баланс" amount={0} type="balance" />
-    <SummaryCard title="Доходы" amount={0} type="income" />
-    <SummaryCard title="Расходы" amount={0} type="expense" />
-    </>
+    <div>
+      <BalanceCard />
+      {/* <RecentTransactions />
+      <FinanceChart /> */}
+    </div>
   );
 };
 

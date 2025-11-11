@@ -16,7 +16,6 @@ const CurrencyRates: React.FC<CurrencyRatesProps> = ({
     fetch("https://open.er-api.com/v6/latest/RUB")
       .then((res) => res.json())
       .then((data) => {
-        console.log(data)
         setRates(data.rates);
       })
       .catch(() => setError("Не удалось получить курсы"))
