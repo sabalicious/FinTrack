@@ -1,15 +1,54 @@
-import React from "react";
+import React, { useState } from "react";
+import { nanoid} from "nanoid";
 import TransactionItem from "../components/TransactionItem";
+import TransactionForm from "../components/TransactionForm";
+
+interface TransactionType {
+  id: string;
+  title: string;
+  amount: number;
+  type: "income" | "expense";
+  date: Date;
+}
 
 const Transactions: React.FC = () => {
+  const [transactions, setTransactions] = useState<TransactionType[]>([
+    {
+      id: nanoid(),
+      title: "Salary",
+      amount: 3000,
+      type: "income",
+      date: new Date(),
+    },
+    {
+      id: nanoid(),
+      title: "Lunch",
+      amount: 20,
+      type: "expense",
+      date: new Date(),
+    }
+  ]);
+
+  const addTransaction = (newTransaction: TransactionType) => {
+    setTransactions([...transactions, newTransaction]);
+  }
+
   return (
-    <div className="p-4">
+    <section className="p-4">
       <h2 className="text-xl font-bold mb-4">Transactions</h2>
-      <div className="grid gap-2">
-        <TransactionItem title="Idk" amount={0} type="income" date={new Date}/>
-        <TransactionItem title="Idk" amount={0} type="expense" date={new Date}/>
-      </div>
-    </div>
+      <TransactionForm onAdd={addTransaction}/>
+      <ul>
+        {transactions.map(({ id, title, amount, type, date }) => {
+          return <TransactionItem
+            key={id}
+            title={title}
+            amount={amount}
+            type={type}
+            date={date}
+          />
+        })}
+      </ul>
+    </section>
   );
 };
 
