@@ -7,10 +7,13 @@ interface SummaryCardProps {
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, amount, type}) => {
-  const bgColor = 
-    type === 'balance' ? 'bg-blue-500 hover:bg-blue-600' :
-    type === 'income' ? 'bg-green-500 hover:bg-green-600' :
-    'bg-red-500 hover:bg-red-600';
+  const colors = {
+    balance: "bg-blue-500",
+    income: "bg-green-500",
+    expense: "bg-red-500"
+  }
+
+  const bgColor = colors[type];
 
   return (
     <div className={`${bgColor} text-white p-4 rounded shadow-md`}>
