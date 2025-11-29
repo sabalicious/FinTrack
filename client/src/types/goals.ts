@@ -1,7 +1,7 @@
-export type GoalsType = {
+export type Goal = {
   id: string;
   title: string;
-  targetAmount: number;
-  currentAmount: number;
-  dateCreated: Date;
+  target_amount: number;
+  current_amount: number;
+  date_created: string;
 };

@@ -1,55 +1,71 @@
-import React, { useState } from "react";
-import { nanoid} from "nanoid";
-import TransactionItem from "../components/TransactionItem";
+import React, { useEffect, useState } from "react";
+import { getTransactions, addTransaction, Transaction } from "../api/transactions";
 import TransactionForm from "../components/TransactionForm";
+import TransactionItem from "../components/TransactionItem";
 
-interface TransactionType {
-  id: string;
-  title: string;
-  amount: number;
-  type: "income" | "expense";
-  date: Date;
-}
+const token = localStorage.getItem("token") || "";
 
-const Transactions: React.FC = () => {
-  const [transactions, setTransactions] = useState<TransactionType[]>([
-    {
-      id: nanoid(),
-      title: "Salary",
-      amount: 3000,
-      type: "income",
-      date: new Date(),
-    },
-    {
-      id: nanoid(),
-      title: "Lunch",
-      amount: 20,
-      type: "expense",
-      date: new Date(),
+export default function Transactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const data = await getTransactions(token);
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
     }
-  ]);
+  };
 
-  const addTransaction = (newTransaction: TransactionType) => {
-    setTransactions([...transactions, newTransaction]);
-  }
+  const handleAdd = async (newTx: { title: string; amount: number; type: "income" | "expense"; date: Date }) => {
+    try {
+      console.log("Отправляем на backend:", {
+        title: newTx.title,
+        amount: newTx.amount,
+        type: newTx.type,
+        date: newTx.date.toISOString(),
+      });
+
+      const tx = await addTransaction(
+        { ...newTx, date: newTx.date.toISOString() },
+        token
+      );
+
+      console.log("Ответ от backend:", tx);
+
+      const safeTx = {
+        ...tx,
+        date: tx.date ? new Date(tx.date) : new Date(),
+      };
+
+      setTransactions([safeTx, ...transactions]);
+    } catch (err) {
+      console.error("Failed to add transaction:", err);
+    }
+  };
 
   return (
-    <section className="p-4">
-      <h2 className="text-xl font-bold mb-4">Transactions</h2>
-      <TransactionForm onAdd={addTransaction}/>
-      <ul>
-        {transactions.map(({ id, title, amount, type, date }) => {
-          return <TransactionItem
-            key={id}
-            title={title}
-            amount={amount}
-            type={type}
-            date={date}
-          />
+    <div>
+      <h2 className="text-2xl font-semibold mb-4">Transactions</h2>
+      <TransactionForm onAdd={handleAdd} />
+      <ul className="flex flex-col gap-2">
+        {transactions.map(tx => { 
+          const txDate = tx.date ? new Date(tx.date) : new Date();
+          return (
+            <TransactionItem
+              key={tx.id}
+              title={tx.title || "Без названия"}
+              amount={tx.amount || 0}
+              type={tx.type || "income"}
+              date={txDate}
+            />
+          );
         })}
       </ul>
-    </section>
+    </div>
   );
-};
-
-export default Transactions;
+}

@@ -1,3 +1,6 @@
+import React, { useEffect, useState } from "react";
+import { getTransactions } from "../../api/transactions";
+
 type Tx = {
   title: string;
   amount: number;
@@ -5,12 +8,33 @@ type Tx = {
   date: Date;
 };
 
-const RecentTransactions = () => {
-  const transactions: Tx[] = [
-    { title: "Salary", amount: 3000, type: "income", date: new Date() },
-    { title: "Lunch", amount: 120, type: "expense", date: new Date() },
-    { title: "Taxi", amount: 150, type: "expense", date: new Date() },
-  ];
+const RecentTransactions: React.FC = () => {
+  const [transactions, setTransactions] = useState<Tx[]>([]);
+  const token = localStorage.getItem("token") || "";
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const data = await getTransactions(token);
+
+      // Преобразуем amount в число и date в объект Date
+      const parsed = Array.isArray(data)
+        ? data.map((tx: any) => ({
+            ...tx,
+            amount: Math.round(Number(tx.amount)), // целое число
+            date: new Date(tx.date),               // объект Date
+          }))
+        : [];
+
+      console.log("Transactions from backend:", parsed); // <-- логируем
+      setTransactions(parsed);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+    }
+  };
 
   const colors = {
     income: "text-green-500",
@@ -22,18 +46,22 @@ const RecentTransactions = () => {
       <h2 className="text-lg font-bold mb-4 text-gray-800">Recent Transactions</h2>
 
       <ul className="space-y-3 flex-1">
-        {transactions.slice(-3).map(({ title, amount, type, date }) => (
-          <li
-            key={title + date.toISOString()}
-            className="flex justify-between items-center hover:bg-gray-50 transition-colors rounded-md px-2 py-1"
-          >
-            <div>
-              {title}
-              <span className="text-gray-400 text-xs">{date.toLocaleDateString()}</span>
-            </div>
-            <div className={`${colors[type]}`}>{amount} ₽</div>
-          </li>
-        ))}
+        {transactions
+          .slice(0, 3)
+          .map(({ title, amount, type, date }, idx) => (
+            <li
+              key={idx}
+              className="flex justify-between items-center hover:bg-gray-50 transition-colors rounded-md px-2 py-1"
+            >
+              <div>
+                {title}{" "}
+                <span className="text-gray-400 text-xs">
+                  {date.toLocaleDateString()}
+                </span>
+              </div>
+              <div className={`${colors[type]}`}>{amount} ₽</div>
+            </li>
+          ))}
       </ul>
     </div>
   );

@@ -7,17 +7,17 @@ interface TransactionItemProps {
   date: Date;
 }
 
-const TransactionItem: React.FC<TransactionItemProps> = ({ title, amount, type, date}) => {
+const TransactionItem: React.FC<TransactionItemProps> = ({ title, amount, type, date }) => {
   const symbol = type === "income" ? "+" : "-";
 
   const colors = {
     income: "bg-green-500",
-    expense: "bg-red-500"
-  }
+    expense: "bg-red-500",
+  };
   const bgColor = colors[type];
 
   return (
-    <li className={`flex items-center p-3 border rounded gap-3`}>
+    <li className="flex items-center p-3 border rounded gap-3">
       <div className={`w-2 self-stretch rounded ${bgColor}`} />
       <div className="flex-1">
         <h3 className="font-medium">{title}</h3>
@@ -26,7 +26,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ title, amount, type, 
         </time>
       </div>
       <div className="text-lg font-semibold">
-        {symbol}{amount}
+        {symbol}{Math.round(amount)}
       </div>
     </li>
   );

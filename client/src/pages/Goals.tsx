@@ -1,55 +1,19 @@
-import React, { useState, useEffect } from "react";
-import GoalList from "../components/goals/GoalList";
-import GoalForm from "../components/goals/GoalForm";
+import { useContext } from "react";
 import { GoalsContext } from "../context/GoalsContext";
-import { GoalsType } from "../types/goals";
+import GoalForm from "../components/goals/GoalForm";
+import GoalList from "../components/goals/GoalList";
 
-const Goals: React.FC = () => {
-  const stored = localStorage.getItem("goals");
-  let initialGoals: GoalsType[] = [];
+export default function Goals() {
+  const goalsContext = useContext(GoalsContext);
+  if (!goalsContext) return <div>Ошибка: GoalsContext не найден</div>;
 
-  if (stored) {
-    try {
-      initialGoals = JSON.parse(stored).map((g: GoalsType) => ({
-        ...g,
-        dateCreated: new Date(g.dateCreated),
-      }));
-    } catch {
-      initialGoals = [];
-    }
-  }
-  
-  const [goals, setGoals] = useState<GoalsType[]>(initialGoals);
-
-  useEffect(() => {
-    localStorage.setItem("goals", JSON.stringify(goals));
-  }, [goals]);
-
-  const addGoal = (goal: GoalsType) => {
-    setGoals((prev) => [...prev, goal]);
-  };
-
-  const deleteGoal = (id: string) => {
-    setGoals((prev) => prev.filter((goal) => goal.id !== id));
-  };
-
-  const updateGoal = (updatedGoal: GoalsType) => {
-    setGoals((prev) =>
-      prev.map((goal) => (goal.id === updatedGoal.id ? updatedGoal : goal))
-    );
-  };
+  const { addGoal } = goalsContext;
 
   return (
-    <GoalsContext.Provider value={{ goals, addGoal, deleteGoal, updateGoal }}>
-      <div className="p-6 max-w-6xl mx-auto flex flex-col gap-6">
-        <h1 className="text-2xl font-bold">Мои цели</h1>
-
-        <GoalForm />
-
-        <GoalList />
-      </div>
-    </GoalsContext.Provider>
+    <div className="p-4">
+      <h2 className="text-2xl font-semibold mb-4">Goals</h2>
+      <GoalForm addGoal={addGoal} />
+      <GoalList />
+    </div>
   );
-};
-
-export default Goals;
+}

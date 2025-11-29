@@ -1,16 +1,12 @@
 import React, { useState } from "react";
-import { nanoid } from "nanoid";
-
-interface TransactionType {
-  id: string;
-  title: string;
-  amount: number;
-  type: "income" | "expense";
-  date: Date;
-}
 
 interface TransactionFormProps {
-  onAdd: (transaction: TransactionType) => void;
+  onAdd: (transaction: {
+    title: string;
+    amount: number;
+    type: "income" | "expense";
+    date: Date;
+  }) => void;
 }
 
 const TransactionForm: React.FC<TransactionFormProps> = ({ onAdd }) => {
@@ -21,23 +17,23 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onAdd }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !amount || !date) return;
+    if (!title || !amount) return;
 
-    const newTransaction: TransactionType = {
-      id: nanoid(),
+    // Если дата не указана, ставим сегодняшнюю
+    const txDate = date ? new Date(date) : new Date();
+
+    onAdd({
       title,
       amount: Number(amount),
       type,
-      date: new Date(date),
-    };
-
-    onAdd(newTransaction);
+      date: txDate,
+    });
 
     setTitle("");
-    setAmount(0);
+    setAmount("");
     setType("income");
     setDate("");
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="mb-4 p-4 border rounded flex flex-col gap-2">
@@ -45,14 +41,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onAdd }) => {
         type="text"
         placeholder="Название"
         value={title}
-        onChange={(e) => setTitle(e.target.value)} 
+        onChange={(e) => setTitle(e.target.value)}
         className="border p-2 rounded"
       />
       <input
         type="number"
         placeholder="Сумма"
         value={amount}
-        onChange={(e) => setAmount(e.target.valueAsNumber)}
+        onChange={(e) => setAmount(Number(e.target.value))}
         className="border p-2 rounded"
       />
       <select
@@ -69,11 +65,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onAdd }) => {
         onChange={(e) => setDate(e.target.value)}
         className="border p-2 rounded"
       />
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+      <button
+        type="submit"
+        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+      >
         Добавить транзакцию
       </button>
     </form>
-  )
+  );
 };
 
 export default TransactionForm;

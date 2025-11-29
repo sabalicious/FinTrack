@@ -5,9 +5,7 @@ import GoalItem from "./GoalItem";
 const GoalList = () => {
   const goalsContext = useContext(GoalsContext);
 
-  if (!goalsContext) {
-    return <div>Ошибка: GoalsContext не найден</div>;
-  }
+  if (!goalsContext) return <div>Ошибка: GoalsContext не найден</div>;
 
   const { goals } = goalsContext;
 
@@ -18,7 +16,7 @@ const GoalList = () => {
   return (
     <ul className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 p-4">
       {goals.map((goal) => (
-        <GoalItem key={goal.id} goal={goal}/>
+        <GoalItem key={goal.id} goal={goal} />
       ))}
     </ul>
   );

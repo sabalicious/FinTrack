@@ -1,19 +1,51 @@
-import React from "react";
+import { useEffect, useState } from "react";
 
-const BalanceCard: React.FC = () => {
-  const transactions = [
-    { amount: 3000, type: "income" },
-    { amount: 120, type: "expense" },
-    { amount: 150, type: "expense" },
-  ];
+type Tx = {
+  id: number;
+  title: string;
+  amount: number;
+  type: "income" | "expense";
+  created_at: string;
+};
+
+const BalanceCard = () => {
+  const [transactions, setTransactions] = useState<Tx[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    console.log("ЗАПРОС НА ТРАНЗАКЦИИ...");
+
+    const load = async () => {
+      try {
+        const res = await fetch("http://localhost:3001/api/transactions");
+        const data = await res.json();
+
+        setTransactions(data);
+      } catch (err) {
+        console.error("ОШИБКА ПРИ ЗАГРУЗКЕ:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (transactions.length > 0) {
+      console.log("📦 ТРАНЗАКЦИИ В СТЕЙТЕ:", transactions);
+    }
+  }, [transactions]);
+
+  if (loading) return <div className="bg-white p-6 rounded-xl shadow-md">Loading...</div>;
 
   const totalIncome = transactions
-    .filter(({ type }) => type === "income")
-    .reduce((sum, { amount }) => sum + amount, 0);
+    .filter(tx => tx.type === "income")
+    .reduce((sum, tx) => sum + Math.round(Number(tx.amount)), 0);
 
   const totalExpense = transactions
-    .filter(({ type }) => type === "expense")
-    .reduce((sum, { amount }) => sum + amount, 0);
+    .filter(tx => tx.type === "expense")
+    .reduce((sum, tx) => sum + Math.round(Number(tx.amount)), 0);
 
   const balance = totalIncome - totalExpense;
   const expensePercent = totalIncome ? (totalExpense / totalIncome) * 100 : 0;
@@ -42,7 +74,9 @@ const BalanceCard: React.FC = () => {
           style={{ width: `${expensePercent}%` }}
         ></div>
       </div>
-      <p className="text-xs mt-1 opacity-75">{expensePercent.toFixed(1)}% of income spent</p>
+      <p className="text-xs mt-1 opacity-75">
+        {expensePercent.toFixed(1)}% от дохода потрачено
+      </p>
     </div>
   );
 };

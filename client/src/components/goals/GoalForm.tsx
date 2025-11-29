@@ -1,30 +1,27 @@
-import React, { useContext, useState } from "react";
-import { GoalsType } from "../../types/goals";
-import { nanoid } from "nanoid";
-import { GoalsContext } from "../../context/GoalsContext";
+import { useState } from "react";
+import { Goal } from "../../api/goals";
 
-const GoalForm: React.FC = () => {
-  const [title, setTitle] = useState<string>("");
-  const [targetAmount, setTargetAmount] = useState<number>(0);
+interface GoalFormProps {
+  addGoal: (goal: Goal) => void;
+}
 
-  const goalsContext = useContext(GoalsContext);
-  if (!goalsContext) {
-    return <div>Ошибка: GoalsContext не найден</div>;
-  }
-
-  const { addGoal } = goalsContext;
+const GoalForm: React.FC<GoalFormProps> = ({ addGoal }) => {
+  const [title, setTitle] = useState("");
+  const [target_amount, setTargetAmount] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || targetAmount <= 0) return;
+    if (!title || target_amount <= 0) return;
 
-    const newGoal: GoalsType = {
-      id: nanoid(),
+    const newGoal = {
+      id: "", // backend сам сгенерирует id
       title,
-      targetAmount,
-      currentAmount: 0,
-      dateCreated: new Date(),
+      target_amount,
+      current_amount: 0,
+      created_at: new Date().toISOString(),
     };
+
+    console.log("Отправляем на контекст/бэк:", newGoal); // <-- Логируем
 
     addGoal(newGoal);
 
@@ -33,10 +30,7 @@ const GoalForm: React.FC = () => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-xl shadow-md w-full max-w-md mx-auto flex flex-col gap-4"
-    >
+    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md w-full max-w-md mx-auto flex flex-col gap-4">
       <input
         type="text"
         placeholder="Название цели"
@@ -47,17 +41,11 @@ const GoalForm: React.FC = () => {
       <input
         type="number"
         placeholder="Сумма"
-        value={targetAmount || ""}
-        onChange={(e) =>
-          setTargetAmount(e.target.value ? Number(e.target.value) : 0)
-        }
+        value={target_amount || ""}
+        onChange={(e) => setTargetAmount(Number(e.target.value))}
         className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
-
-      <button
-        type="submit"
-        className="bg-blue-500 text-white font-medium py-2 rounded-md hover:bg-blue-600 transition-colors"
-      >
+      <button type="submit" className="bg-blue-500 text-white font-medium py-2 rounded-md hover:bg-blue-600 transition-colors">
         Добавить цель
       </button>
     </form>
