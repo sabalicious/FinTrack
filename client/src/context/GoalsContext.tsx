@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { Goal, getGoals, addGoal as apiAddGoal, updateGoal as apiUpdateGoal, deleteGoal as apiDeleteGoal } from "../api/goals";
+import { useAuth } from "./AuthContext";
 
 interface GoalsContextType {
   goals: Goal[];
@@ -12,13 +13,16 @@ export const GoalsContext = createContext<GoalsContextType | null>(null);
 
 export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const token = localStorage.getItem("token") || "";
+  const { token } = useAuth();
 
   useEffect(() => {
-    fetchGoals();
-  }, []);
+    if (token) {
+      fetchGoals();
+    }
+  }, [token]);
 
   const fetchGoals = async () => {
+    if (!token) return;
     try {
       const data = await getGoals(token);
       setGoals(Array.isArray(data) ? data : []);
@@ -28,21 +32,22 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addGoal = async (goal: Omit<Goal, "id" | "current_amount" | "date_created">) => {
-  try {
-    const payload = { ...goal, current_amount: 0, date_created: new Date().toISOString() };
-    console.log("Отправляем на API:", payload); // <-- Логируем перед fetch
+    if (!token) return;
+    try {
+      const payload = { ...goal, current_amount: 0, date_created: new Date().toISOString() };
+      console.log("Отправляем на API:", payload); // <-- Логируем перед fetch
 
-    const newGoal = await apiAddGoal(payload, token);
-    console.log("Ответ от backend:", newGoal); // <-- Логируем ответ
+      const newGoal = await apiAddGoal(payload, token);
+      console.log("Ответ от backend:", newGoal); // <-- Логируем ответ
 
-    setGoals([newGoal, ...goals]);
-  } catch (err) {
-    console.error("Failed to add goal:", err);
-  }
-};
-
+      setGoals([newGoal, ...goals]);
+    } catch (err) {
+      console.error("Failed to add goal:", err);
+    }
+  };
 
   const updateGoal = async (goal: Goal) => {
+    if (!token) return;
     try {
       const updatedGoal = await apiUpdateGoal(goal, token); // передаём весь объект
       setGoals(goals.map(g => g.id === goal.id ? updatedGoal : g));
@@ -52,6 +57,7 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteGoal = async (id: string) => {
+    if (!token) return;
     try {
       await apiDeleteGoal(id, token);
       setGoals(goals.filter(g => g.id !== id));

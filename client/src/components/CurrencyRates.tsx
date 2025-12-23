@@ -1,40 +1,44 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { getCurrencies, Currency } from "../api/currencies";
 
-interface CurrencyRatesProps {
-  displayedCurrencies?: string[];
-}
-
-const CurrencyRates: React.FC<CurrencyRatesProps> = ({
-  displayedCurrencies = ["USD", "EUR"],
-}) => {
-  const [rates, setRates] = useState<Record<string, number>>({});
+const CurrencyRates: React.FC = () => {
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return;
+    
     setLoading(true);
-    fetch("https://open.er-api.com/v6/latest/RUB")
-      .then((res) => res.json())
+    getCurrencies(token)
       .then((data) => {
-        setRates(data.rates);
+        setCurrencies(data);
+        setError(null);
       })
-      .catch(() => setError("Не удалось получить курсы"))
+      .catch((err) => {
+        console.error('Failed to fetch currencies:', err);
+        setError("Не удалось получить курсы");
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   if (loading) return <p className="text-sm">Загрузка курсов...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
-  if (!rates || Object.keys(rates).length === 0) return null;
+  if (!currencies || currencies.length === 0) return null;
+
+  // Show only USD and EUR if available
+  const displayedCodes = ['USD', 'EUR'];
+  const displayedCurrencies = currencies.filter(c => displayedCodes.includes(c.code));
 
   return (
     <ul className="flex gap-4 text-sm font-medium items-center">
-      {Object.entries(rates)
-        .filter(([currency]) => displayedCurrencies.includes(currency))
-        .map(([currency, rate]) => (
-          <li key={currency}>
-            {currency}: {(1 / rate).toFixed(2)} RUB
-          </li>
-        ))}
+      {displayedCurrencies.map((currency) => (
+        <li key={currency.id}>
+          {currency.code}: {currency.exchange_rate.toFixed(2)} {currency.symbol}
+        </li>
+      ))}
     </ul>
   );
 };

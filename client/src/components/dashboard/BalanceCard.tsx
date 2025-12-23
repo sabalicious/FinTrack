@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { getTransactions } from "../../api/transactions";
+import { useAuth } from "../../context/AuthContext";
 
 type Tx = {
   id: number;
@@ -11,16 +13,20 @@ type Tx = {
 const BalanceCard = () => {
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     console.log("ЗАПРОС НА ТРАНЗАКЦИИ...");
 
     const load = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/transactions");
-        const data = await res.json();
-
-        setTransactions(data);
+        const data = await getTransactions(token);
+        setTransactions(data as unknown as Tx[]);
       } catch (err) {
         console.error("ОШИБКА ПРИ ЗАГРУЗКЕ:", err);
       } finally {
@@ -29,7 +35,7 @@ const BalanceCard = () => {
     };
 
     load();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (transactions.length > 0) {
@@ -37,7 +43,7 @@ const BalanceCard = () => {
     }
   }, [transactions]);
 
-  if (loading) return <div className="bg-white p-6 rounded-xl shadow-md">Loading...</div>;
+  if (loading) return <div className="bg-white p-6 rounded-xl shadow-md">Загрузка...</div>;
 
   const totalIncome = transactions
     .filter(tx => tx.type === "income")
@@ -53,17 +59,17 @@ const BalanceCard = () => {
   return (
     <div className="bg-white/90 p-6 rounded-xl shadow-md flex-1 flex flex-col justify-between">
       <div>
-        <h2 className="text-lg font-bold mb-2">Balance</h2>
+        <h2 className="text-lg font-bold mb-2">Баланс</h2>
         <p className="text-3xl font-semibold">{balance} ₽</p>
       </div>
 
       <div className="flex justify-between mt-6">
         <div className="text-center">
-          <p className="text-sm text-gray-500">Income</p>
+          <p className="text-sm text-gray-500">Доход</p>
           <p className="mt-1 font-medium text-green-500">{totalIncome} ₽</p>
         </div>
         <div className="text-center">
-          <p className="text-sm text-gray-500">Expense</p>
+          <p className="text-sm text-gray-500">Расход</p>
           <p className="mt-1 font-medium text-red-500">{totalExpense} ₽</p>
         </div>
       </div>

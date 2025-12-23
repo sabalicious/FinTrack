@@ -1,19 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const knex = require('../knex');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Get all goals
+// Get all goals for user
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM goals WHERE user_id=$1 ORDER BY created_at DESC',
-      [req.user.id]
-    );
-    res.json(result.rows);
+    const rows = await knex('goals').where({ user_id: req.user.id }).orderBy('created_at', 'desc');
+
+    const goals = rows.map(goal => ({
+      ...goal,
+      target_amount: parseFloat(goal.target_amount),
+      current_amount: parseFloat(goal.current_amount),
+      id: goal.id.toString(),
+    }));
+
+    res.json(goals);
   } catch (err) {
+    console.error('❌ Error in GET /goals:', err.message);
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
 
@@ -21,11 +28,17 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   const { title, target_amount, current_amount, deadline } = req.body;
   try {
-    const result = await pool.query(
-      'INSERT INTO goals (user_id, title, target_amount, current_amount, deadline) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.user.id, title, target_amount, current_amount || 0, deadline || null]
-    );
-    res.json(result.rows[0]);
+    const inserted = await knex('goals')
+      .insert({ user_id: req.user.id, title, target_amount, current_amount: current_amount || 0, created_at: knex.fn.now() })
+      .returning('*');
+
+    const goal = inserted[0];
+    res.json({
+      ...goal,
+      target_amount: parseFloat(goal.target_amount),
+      current_amount: parseFloat(goal.current_amount),
+      id: goal.id.toString(),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -37,11 +50,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { title, target_amount, current_amount, deadline } = req.body;
   try {
-    const result = await pool.query(
-      'UPDATE goals SET title=$1, target_amount=$2, current_amount=$3, deadline=$4 WHERE id=$5 AND user_id=$6 RETURNING *',
-      [title, target_amount, current_amount, deadline || null, id, req.user.id]
-    );
-    res.json(result.rows[0]);
+    const updated = await knex('goals')
+      .where({ id, user_id: req.user.id })
+      .update({ title, target_amount, current_amount })
+      .returning('*');
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Goal not found or access denied' });
+    }
+
+    const goal = updated[0];
+    res.json({
+      ...goal,
+      target_amount: parseFloat(goal.target_amount),
+      current_amount: parseFloat(goal.current_amount),
+      id: goal.id.toString(),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -52,7 +76,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM goals WHERE id=$1 AND user_id=$2', [id, req.user.id]);
+    const deleted = await knex('goals').where({ id, user_id: req.user.id }).del().returning('id');
+
+    if (deleted.length === 0) {
+      return res.status(404).json({ error: 'Goal not found or access denied' });
+    }
     res.json({ message: 'Goal deleted' });
   } catch (err) {
     console.error(err);

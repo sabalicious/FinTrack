@@ -1,108 +1,114 @@
+// Disable console logs
+require('./disableConsole');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const pool = require('./db');
-const jwt = require('jsonwebtoken');
+
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Security middleware
+app.use(helmet());
+
+// Standard middleware
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
+// Rate limiting for auth endpoints (max 5 requests per 15 minutes per IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests
+  message: 'Too many login/register attempts, please try again later',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
-// ==================== Auth Middleware ====================
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+// ==================== Routes ====================
+// Импортируем роуты из отдельных файлов
+const authRouter = require('./routes/auth');
+const transactionsRouter = require('./routes/transactions');
+const goalsRouter = require('./routes/goals');
+const categoriesRouter = require('./routes/categories');
+const currenciesRouter = require('./routes/currencies');
+const statsRouter = require('./routes/stats');
+const debtsRouter = require('./routes/debts');
+const templatesRouter = require('./routes/templates');
+const notesRouter = require('./routes/notes');
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Forbidden' });
-    req.user = user;
-    next();
-  });
+// Подключаем роуты
+app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/transactions', transactionsRouter);
+app.use('/api/goals', goalsRouter);
+app.use('/api/categories', categoriesRouter);
+app.use('/api/currencies', currenciesRouter);
+app.use('/api/stats', statsRouter);
+app.use('/api/debts', debtsRouter);
+app.use('/api/templates', templatesRouter);
+app.use('/api/notes', notesRouter);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Catch-all for undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Auto-update currency rates on server start and every 24 hours
+const updateCurrencyRates = async () => {
+  try {
+    console.log('🔄 Updating currency rates from external API...');
+    const response = await fetch('https://open.er-api.com/v6/latest/RUB');
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const rates = data.rates;
+
+    if (!rates || Object.keys(rates).length === 0) {
+      throw new Error('No rates returned');
+    }
+
+    // Get all active currencies from DB
+    const currenciesResult = await pool.query('SELECT id, code FROM currencies WHERE is_active = true');
+    const currencies = currenciesResult.rows;
+
+    // Update each currency's exchange rate
+    let updatedCount = 0;
+    for (const currency of currencies) {
+      const rate = rates[currency.code];
+      if (rate && rate > 0) {
+        await pool.query(
+          'UPDATE currencies SET exchange_rate = $1 WHERE id = $2',
+          [1 / rate, currency.id]
+        );
+        updatedCount++;
+      }
+    }
+    
+    console.log(`✅ Updated ${updatedCount} currency rates`);
+  } catch (err) {
+    console.error('❌ Failed to update currency rates:', err.message);
+  }
 };
 
-// ==================== Transactions Routes ====================
-app.get('/api/transactions', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM transactions ORDER BY date_created DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// Update rates on startup
+updateCurrencyRates();
 
-app.post('/api/transactions', async (req, res) => {
-  const { title, amount, type, date } = req.body;
-
-  try {
-    const result = await pool.query(
-      'INSERT INTO transactions (title, amount, type, date_created) VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, amount, type, date || new Date()]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Получить все цели
-app.get('/api/goals', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM goals ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Добавить цель
-app.post('/api/goals', async (req, res) => {
-  const { title, target_amount } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO goals (title, target_amount, current_amount, created_at) VALUES ($1, $2, 0, NOW()) RETURNING *',
-      [title, target_amount]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Обновить цель
-app.put('/api/goals/:id', async (req, res) => {
-  const { id } = req.params;
-  const { title, target_amount, current_amount } = req.body;
-  try {
-    const result = await pool.query(
-      'UPDATE goals SET title=$1, target_amount=$2, current_amount=$3 WHERE id=$4 RETURNING *',
-      [title, target_amount, current_amount, id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Удалить цель
-app.delete('/api/goals/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM goals WHERE id=$1', [id]);
-    res.json({ message: 'Goal deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+// Update rates every 24 hours (86400000 ms)
+setInterval(updateCurrencyRates, 24 * 60 * 60 * 1000);
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

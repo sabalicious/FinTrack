@@ -1,31 +1,56 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const knex = require('../knex');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Get all transactions for user
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT t.*, c.name AS category_name, c.type AS category_type FROM transactions t LEFT JOIN categories c ON t.category_id=c.id WHERE t.user_id=$1 ORDER BY t.created_at DESC',
-      [req.user.id]
-    );
-    res.json(result.rows);
+    const rows = await knex('transactions as t')
+      .select('t.*', 'c.name as category_name')
+      .leftJoin('categories as c', 't.category_id', 'c.id')
+      .where('t.user_id', req.user.id)
+      .orderBy('t.date_created', 'desc');
+
+    const transactions = rows.map(tx => ({
+      ...tx,
+      amount: parseFloat(tx.amount),
+      id: tx.id.toString(),
+    }));
+
+    res.json(transactions);
   } catch (err) {
+    console.error('❌ Error in GET /transactions:', err.message);
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
 
 // Add transaction
 router.post('/', authMiddleware, async (req, res) => {
-  const { amount, category_id, note } = req.body;
+  const { title, amount, type, date, category_id, account_id, currency_id } = req.body;
+  
   try {
-    const result = await pool.query(
-      'INSERT INTO transactions (user_id, amount, category_id, note) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.user.id, amount, category_id || null, note || null]
-    );
-    res.json(result.rows[0]);
+    const inserted = await knex('transactions')
+      .insert({
+        user_id: req.user.id,
+        title,
+        amount,
+        type,
+        date_created: knex.fn.now(),
+        category_id: category_id || null,
+        account_id: account_id || null,
+        currency_id: currency_id || null,
+      })
+      .returning('*');
+
+    const tx = inserted[0];
+    res.json({
+      ...tx,
+      amount: parseFloat(tx.amount),
+      id: tx.id.toString(),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -35,13 +60,31 @@ router.post('/', authMiddleware, async (req, res) => {
 // Update transaction
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { amount, category_id, note } = req.body;
+  const { title, amount, type, date, category_id, account_id, currency_id } = req.body;
+  
   try {
-    const result = await pool.query(
-      'UPDATE transactions SET amount=$1, category_id=$2, note=$3 WHERE id=$4 AND user_id=$5 RETURNING *',
-      [amount, category_id || null, note || null, id, req.user.id]
-    );
-    res.json(result.rows[0]);
+    const updated = await knex('transactions')
+      .where({ id, user_id: req.user.id })
+      .update({
+        title,
+        amount,
+        type,
+        category_id: category_id || null,
+        account_id: account_id || null,
+        currency_id: currency_id || null,
+      })
+      .returning('*');
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Transaction not found or access denied' });
+    }
+
+    const tx = updated[0];
+    res.json({
+      ...tx,
+      amount: parseFloat(tx.amount),
+      id: tx.id.toString(),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -52,7 +95,14 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM transactions WHERE id=$1 AND user_id=$2', [id, req.user.id]);
+    const deleted = await knex('transactions')
+      .where({ id, user_id: req.user.id })
+      .del()
+      .returning('id');
+
+    if (deleted.length === 0) {
+      return res.status(404).json({ error: 'Transaction not found or access denied' });
+    }
     res.json({ message: 'Transaction deleted' });
   } catch (err) {
     console.error(err);

@@ -5,18 +5,20 @@ import Sidebar from "../components/Sidebar";
 
 const MainLayout: React.FC = () => {
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar слева */}
-      <Sidebar />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header */}
+      <Header />
 
-      <div className="flex-1 flex flex-col">
-        {/* Header сверху */}
-        <Header />
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar />
 
-        {/* Контент */}
-        <div className="p-4">
-          <Outlet />
-        </div>
+        {/* Main Content */}
+        <main className="flex-1 ml-64 p-8 min-h-[calc(100vh-80px)]">
+          <div className="max-w-7xl mx-auto animate-fade-in">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   );

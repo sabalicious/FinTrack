@@ -10,6 +10,7 @@ import {
   AreaChart,
 } from "recharts";
 import { getTransactions } from "../../api/transactions";
+import { useAuth } from "../../context/AuthContext";
 
 type Tx = {
   title: string;
@@ -26,13 +27,10 @@ type ChartData = {
 
 const FinanceChart: React.FC = () => {
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const token = localStorage.getItem("token") || "";
-
-  useEffect(() => {
-    fetchChartData();
-  }, []);
+  const { token } = useAuth();
 
   const fetchChartData = async () => {
+    if (!token) return;
     try {
       const transactions: Tx[] = await getTransactions(token);
 
@@ -65,9 +63,15 @@ const FinanceChart: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (token) {
+      fetchChartData();
+    }
+  }, [token]);
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg mt-6 w-full max-w-4xl mx-auto">
-      <h2 className="text-lg font-bold mb-4">Finance Overview (Current Month)</h2>
+      <h2 className="text-lg font-bold mb-4">Обзор финансов (Текущий месяц)</h2>
 
       <ResponsiveContainer width="100%" height={320}>
         <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
@@ -100,7 +104,7 @@ const FinanceChart: React.FC = () => {
             stroke="#22c55e"
             fillOpacity={1}
             fill="url(#colorIncome)"
-            name="Income"
+            name="Доход"
             strokeWidth={2.5}
           />
           <Area
@@ -109,7 +113,7 @@ const FinanceChart: React.FC = () => {
             stroke="#ef4444"
             fillOpacity={1}
             fill="url(#colorExpense)"
-            name="Expense"
+            name="Расход"
             strokeWidth={2.5}
           />
         </AreaChart>

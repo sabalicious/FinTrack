@@ -12,6 +12,8 @@ dist/
 
 # Environment variables
 .env
+.env.local
+process.env
 
 # OS
 .DS_Store

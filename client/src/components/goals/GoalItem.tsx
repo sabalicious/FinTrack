@@ -51,13 +51,35 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal }) => {
 
       <p className="text-xs text-gray-600 mt-1">{percent.toFixed(1)}% completed</p>
 
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={() => handleAddAmount(1000)}
-          className="px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 transition"
+      <div className="flex gap-2 mt-4 items-center">
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            const form = e.target as HTMLFormElement;
+            const input = form.elements.namedItem('addAmount') as HTMLInputElement;
+            const value = parseFloat(input.value);
+            if (!isNaN(value) && value > 0) {
+              handleAddAmount(value);
+              input.value = '';
+            }
+          }}
+          className="flex gap-2 items-center"
         >
-          +1000 ₽
-        </button>
+          <input
+            type="number"
+            name="addAmount"
+            min={1}
+            step={1}
+            placeholder="Сумма"
+            className="border p-1 rounded w-20 text-sm"
+          />
+          <button
+            type="submit"
+            className="px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 transition"
+          >
+            Пополнить
+          </button>
+        </form>
 
         <button
           onClick={handleDelete}

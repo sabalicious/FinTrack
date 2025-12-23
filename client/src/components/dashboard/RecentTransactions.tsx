@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getTransactions } from "../../api/transactions";
+import { useAuth } from "../../context/AuthContext";
 
 type Tx = {
   title: string;
@@ -10,13 +11,16 @@ type Tx = {
 
 const RecentTransactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Tx[]>([]);
-  const token = localStorage.getItem("token") || "";
+  const { token } = useAuth();
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (token) {
+      fetchTransactions();
+    }
+  }, [token]);
 
   const fetchTransactions = async () => {
+    if (!token) return;
     try {
       const data = await getTransactions(token);
 
@@ -43,7 +47,7 @@ const RecentTransactions: React.FC = () => {
 
   return (
     <div className="bg-white/90 p-6 rounded-xl shadow-md flex-1 flex flex-col justify-between">
-      <h2 className="text-lg font-bold mb-4 text-gray-800">Recent Transactions</h2>
+      <h2 className="text-lg font-bold mb-4 text-gray-800">Недавние транзакции</h2>
 
       <ul className="space-y-3 flex-1">
         {transactions

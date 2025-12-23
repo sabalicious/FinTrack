@@ -11,7 +11,7 @@ export default function Goals() {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">Goals</h2>
+      <h2 className="text-2xl font-semibold mb-4">Цели</h2>
       <GoalForm addGoal={addGoal} />
       <GoalList />
     </div>
